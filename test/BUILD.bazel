@@ -1,0 +1,134 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+RUNFILES_VERSION = "0.1.0"
+LIBLOG_CC_VERSION = "1.0.0"
+UTHASH_VERSION = "2.3.0"
+UNITY_VERSION = "2.5.2"
+
+BASE_COPTS = [
+    "-x", "c",
+    # "-mcpu=arm64",
+    "-target", "arm64-apple-darwin22.5.0",
+    "-Wall",
+    "-Wextra",
+    # GCC:
+    # "-Werror", # turn all warnings into errors
+    # "-Wfatal-errors", # stop on first error
+] + select({
+    "@platforms//os:macos": [
+        "-std=c11",
+        "-Werror=pedantic", # not needed with -Werror?
+        "-Wpedantic", # same as -pedantic, strict ISO C and ISO C++ warnings
+        "-pedantic-errors",
+        "-Wno-gnu-statement-expression",
+        # "-Werror=pedantic",
+        # "-Wno-gnu",
+        # "-Wno-format-pedantic",
+    ],
+    "@platforms//os:linux": [
+        "-std=gnu11",
+        "-fPIC",
+        # "-Wl,--no-undefined",
+    ],
+    "//conditions:default": ["-std=c11"],
+})
+
+########
+#cc_test(
+cc_binary(
+    name  = "test",
+    srcs  = ["runfiles_test.c"], # "test.h"],
+    data  = [
+        ":test.dat",
+        "//test/files:all",
+    ],
+    deps = [
+        "//src:runfiles",
+        "@liblog_cc//src:logc",
+        "@unity//src:unity",
+    ],
+    copts = select({
+        "@platforms//os:macos": ["-std=c11"],
+        "@platforms//os:linux": ["-std=gnu11"],
+        "//conditions:default": ["-std=c11"],
+    }) + [
+        "-Wall",
+        "-Wpedantic",
+        "-Wno-unused-function",
+        "-I$(GENDIR)/src",
+        "-Iexternal/liblog_cc~{}/src".format(LIBLOG_CC_VERSION),
+        "-Iexternal/unity~{}/src".format(UNITY_VERSION),
+   ],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [ "-Wl,-E", "-ldl"],
+        "//conditions:default": {}
+    }) + [
+        # "-l",
+    ],
+    # defines = select({
+    #     "@platforms//os:debug": ["DEBUG_TRACE"],
+    #     "//conditions:default":   []
+    # }) + select({
+    #     "@platforms//os:linux": ["_XOPEN_SOURCE=500"], # strdup
+    #     "//conditions:default":   []
+    # }) + [
+    #     # "WITH_C_LOADER"
+    # ],
+    visibility = ["//visibility:public"]
+)
+
+##########
+# cc_binary(
+#     name  = "app",
+#     data  = [
+#         ":test.dat",
+#         "//new/templates:all",
+#     ],
+#     srcs  = [
+#         "test_app.c", "test_app.h",
+#         # "runfiles.h",
+#         # "log.c", "log.h",
+#         "utstring.h"
+#     ],
+#     defines = select({
+#         "@platforms//os:debug": ["DEBUG_TRACE"],
+#         "//conditions:default":   []
+#     }) + select({
+#         "@platforms//os:linux": ["_XOPEN_SOURCE=500"], # strdup
+#         "//conditions:default":   []
+#     }) + [
+#         # "WITH_C_LOADER"
+#     ],
+#     copts = select({
+#         "@platforms//os:macos": ["-std=c11"],
+#         "@platforms//os:linux": ["-std=gnu11"],
+#         "//conditions:default": ["-std=c11"],
+#     }) + [
+#         "-Wall",
+#         "-Wpedantic",
+#         "-Wno-unused-function",
+
+#         "-I$(GENDIR)/runfiles",
+#         "-I$(GENDIR)/external/obazl/runfiles",
+
+#         "-Ivendored/logc",
+#         "-Iexternal/obazl/vendored/logc",
+#         "-Ivendored/unity",
+#         "-Iexternal/obazl/vendored/unity",
+#    ],
+#     linkopts = select({
+#         "@platforms//os:macos": [],
+#         "@platforms//os:linux": [ "-Wl,-E", "-ldl"],
+#         "//conditions:default": {}
+#     }) + [
+#         # "-l",
+#     ],
+#     deps = [
+#         ":runfiles",
+#         "//vendored/logc",
+#         "//vendored/unity",
+#     ],
+#     visibility = ["//visibility:public"]
+# )
+

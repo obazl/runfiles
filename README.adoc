@@ -1,0 +1,11 @@
+= runfiles
+Bazel runfiles lib in C
+
+WARNING: not ready for use
+
+
+Other runfiles libs:
+
+C++:  link:https://github.com/bazelbuild/bazel/tree/master/tools/cpp/runfiles[]
+
+Bash: link:https://github.com/bazelbuild/bazel/tree/master/tools/bash

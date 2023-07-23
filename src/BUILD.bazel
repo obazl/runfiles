@@ -1,0 +1,118 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+RUNFILES_VERSION = "0.1.0"
+LIBLOG_CC_VERSION = "1.0.0"
+UTHASH_VERSION = "2.3.0"
+
+BASE_COPTS = [
+    "-x", "c",
+    # "-mcpu=arm64",
+    "-target", "arm64-apple-darwin22.5.0",
+    "-Wall",
+    "-Wextra",
+    # GCC:
+    # "-Werror", # turn all warnings into errors
+    # "-Wfatal-errors", # stop on first error
+] + select({
+    "@platforms//os:macos": [
+        "-std=c11",
+        "-Werror=pedantic", # not needed with -Werror?
+        "-Wpedantic", # same as -pedantic, strict ISO C and ISO C++ warnings
+        "-pedantic-errors",
+        "-Wno-gnu-statement-expression",
+        # "-Werror=pedantic",
+        # "-Wno-gnu",
+        # "-Wno-format-pedantic",
+    ],
+    "@platforms//os:linux": [
+        "-std=gnu11",
+        "-fPIC",
+        # "-Wl,--no-undefined",
+    ],
+    "//conditions:default": ["-std=c11"],
+})
+
+###########
+cc_library(
+    name  = "runfiles",
+    hdrs = ["librunfiles.h"],
+    srcs  = [
+        "runfiles.c", "runfiles.h"
+    ],
+    deps = [
+        "@liblog_cc//src:logc",
+        "@uthash//src:uthash"
+    ],
+    # defines = select({
+    #     "@platforms//os:debug": ["DEBUG_TRACE"],
+    #     "//conditions:default":   []
+    # }) + select({
+    #     "@platforms//os:linux": ["_XOPEN_SOURCE=500"], # strdup
+    #     "//conditions:default":   []
+    # }) + [
+    # ],
+    copts = BASE_COPTS + [
+        "-I$(GENDIR)/src",
+        "-I$(GENDIR)/external/runfiles~{}/src".format(RUNFILES_VERSION),
+        "-Iexternal/uthash~{}/src".format(UTHASH_VERSION),
+        "-Iexternal/liblog_cc~{}/src".format(LIBLOG_CC_VERSION),
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        # "@platforms//os:linux": ["-rdynamic"],
+        # non-linux: [ "-Wl,--export-dynamic", "-ldl"],
+        "//conditions:default": {}
+    }),
+    visibility = ["//visibility:public"]
+)
+
+########
+genrule(
+    name = "mkhdrs",
+    srcs = [
+        "runfiles.c",
+        # "test.c",
+        # "test_app.c",
+        "ansi_colors.h"
+    ],
+    outs = [
+        "runfiles.h",
+        # "test.h",
+        # "test_app.h"
+    ],
+    cmd = "\n".join([
+        "SRC1=$(location runfiles.c)",
+        "SRCDIR1=`dirname $$SRC1`",
+        "$(execpath @makeheaders//src:makeheaders) \\",
+        # "    $(location test_app.c) \\",
+        # "    $(location test.c);",
+        "    $(location ansi_colors.h) \\",
+        "    $(location runfiles.c);",
+        "cp $${SRCDIR1}/*.h $(@D)",
+    ]),
+    tools = ["@makeheaders//src:makeheaders"],
+)
+
+########
+genrule(
+    name = "mkhdrs-export",
+    srcs = [
+        "runfiles.c",
+        # "test.c",
+        "ansi_colors.h"
+    ],
+    outs = [
+        "librunfiles.h",
+    ],
+    cmd = "\n".join([
+        "SRC1=$(location runfiles.c)",
+        "SRCDIR1=`dirname $$SRC1`",
+        "$(execpath @makeheaders//src:makeheaders) -H \\",
+        "    $(location ansi_colors.h) \\",
+        "    $(location runfiles.c) \\",
+        # "    $(location test.c) \\",
+        " > $@",
+        # "cp $${SRCDIR1}/*.h $(@D)",
+    ]),
+    tools = ["@makeheaders//src:makeheaders"],
+)

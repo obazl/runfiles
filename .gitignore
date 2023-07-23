@@ -1,3 +1,16 @@
+.bazel
+bazel-*
+config/config.h
+config/feature/BUILD.bazel
+private
+*.history.txt
+log.*
+*.log
+obsolete
+tmp
+trace
+obsolete
+
 # Prerequisites
 *.d
 
