@@ -1,7 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 RUNFILES_VERSION = "0.1.0"
-LIBLOG_CC_VERSION = "1.0.0"
+LIBLOGC_VERSION = "1.0.0"
 UTHASH_VERSION = "2.3.0"
 UNITY_VERSION = "2.5.2"
 
@@ -44,7 +44,7 @@ cc_binary(
     ],
     deps = [
         "//src:runfiles",
-        "@liblog_cc//src:logc",
+        "@liblogc//src:logc",
         "@unity//src:unity",
     ],
     copts = select({
@@ -56,7 +56,7 @@ cc_binary(
         "-Wpedantic",
         "-Wno-unused-function",
         "-I$(GENDIR)/src",
-        "-Iexternal/liblog_cc~{}/src".format(LIBLOG_CC_VERSION),
+        "-Iexternal/liblogc~{}/src".format(LIBLOGC_VERSION),
         "-Iexternal/unity~{}/src".format(UNITY_VERSION),
    ],
     linkopts = select({

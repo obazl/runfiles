@@ -1,6 +1,6 @@
 LIBS7_VERSION = "0.1.0"
 
-LIBLOG_CC_VERSION = "1.0.0"
+LIBLOGC_VERSION = "1.0.0"
 GOPT_VERSION = "10.0.0"
 CEXCEPTION_VERSION = "1.3.3"
 UNITY_VERSION = "2.5.2"
@@ -49,7 +49,7 @@ BASE_COPTS = [
 BASE_DEPS = [
     "//config:hdrs",
     # "@cexception//lib:CException",
-    "@liblog_cc//src:logc",
+    "@liblogc//src:logc",
 ]
 
 BASE_INCLUDE_PATHS = [
@@ -61,7 +61,7 @@ BASE_INCLUDE_PATHS = [
 
     # "-Iexternal/cexception~{}/lib".format(CEXCEPTION_VERSION),
 
-    "-Iexternal/liblog_cc~{}/src".format(LIBLOG_CC_VERSION),
+    "-Iexternal/liblogc~{}/src".format(LIBLOGC_VERSION),
 ]
 
 BASE_LINKOPTS = select({

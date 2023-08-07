@@ -1,7 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 RUNFILES_VERSION = "0.1.0"
-LIBLOG_CC_VERSION = "1.0.0"
+LIBLOGC_VERSION = "1.0.0"
 UTHASH_VERSION = "2.3.0"
 
 BASE_COPTS = [
@@ -40,7 +40,7 @@ cc_library(
         "runfiles.c", "runfiles.h"
     ],
     deps = [
-        "@liblog_cc//src:logc",
+        "@liblogc//src:logc",
         "@uthash//src:uthash"
     ],
     # defines = select({
@@ -55,7 +55,7 @@ cc_library(
         "-I$(GENDIR)/src",
         "-I$(GENDIR)/external/runfiles~{}/src".format(RUNFILES_VERSION),
         "-Iexternal/uthash~{}/src".format(UTHASH_VERSION),
-        "-Iexternal/liblog_cc~{}/src".format(LIBLOG_CC_VERSION),
+        "-Iexternal/liblogc~{}/src".format(LIBLOGC_VERSION),
     ],
     linkopts = select({
         "@platforms//os:macos": [],
