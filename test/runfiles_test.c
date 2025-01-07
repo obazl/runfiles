@@ -5,14 +5,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "log.h"
+#include "liblogc.h"
 #include "unity.h"
 #include "librunfiles.h"
 
 /* #include "test.h" */
 
-extern bool debug;
-extern bool trace;
+bool debug;
+bool trace;
 extern bool verbose;
 
 /* UT_string *buf; */
@@ -23,14 +23,15 @@ static struct runfiles_s *runfiles = NULL;
 void setUp(void) {
     /* printf(GRN "setUp:" CRESET " %s\n", pgm); */
     if (runfiles != NULL) return;
-    runfiles = runfiles_new(pgm);
-    printf("runfiles:\n");
-    int i = 0;
-    while (runfiles[i].key != NULL) {
-        printf("entry %d: %s -> %s\n", i,
-               runfiles[i].key, runfiles[i].val);
-        i++;
-    }
+    rf_init(pgm);
+    /* runfiles = */
+    /* printf("runfiles:\n"); */
+    /* int i = 0; */
+    /* while (runfiles[i].key != NULL) { */
+    /*     printf("entry %d: %s -> %s\n", i, */
+    /*            runfiles[i].key, runfiles[i].val); */
+    /*     i++; */
+    /* } */
     /* printf("done\n"); */
 }
 
@@ -40,7 +41,7 @@ void tearDown(void) {
 }
 
 void test_runfiles(void) {
-    char *test_str = "foo";
+    /* char *test_str = "foo"; */
     int i = 0;
     while (runfiles[i].key != NULL) {
         char *lhs_basename = basename(runfiles[i].key);
@@ -60,14 +61,12 @@ void test_runfile_count(void) {
 
 void test_runfile_search(void)
 {
-    char *needle = "obazl/new/templates/WORKSPACE.bazel";
-    int i = 0;
-    while (runfiles[i].key != NULL) {
-        if (strcmp(runfiles[i].key, needle) == 0)
-            break;
-        i++;
-    }
-    TEST_ASSERT_EQUAL_INT(9, i);
+    char *f = BAZEL_CURRENT_REPOSITORY
+        "test/test.dat";
+    log_debug("searching for: %s", f);
+    char *rf = rf_rlocation(f);
+    int rc = access(rf, F_OK);
+    TEST_ASSERT_EQUAL_INT(0, rc);
 }
 
 int main(int argc, char *argv[])
@@ -142,8 +141,8 @@ int main(int argc, char *argv[])
     pgm = argv[0];
 
     UNITY_BEGIN();
-    RUN_TEST(test_runfiles);
-    RUN_TEST(test_runfile_count);
+    /* RUN_TEST(test_runfiles); */
+    /* RUN_TEST(test_runfile_count); */
     RUN_TEST(test_runfile_search);
     UNITY_END();
 

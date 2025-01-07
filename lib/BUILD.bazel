@@ -1,0 +1,68 @@
+load("@makeheaders//rules:makeheaders.bzl", "makeheaders")
+load("@obazl_config_cc//config:BASE.bzl", "BASE_COPTS")
+
+###########
+cc_library(
+    name     = "runfiles",
+    hdrs     = ["librunfiles.h"],
+    includes = ["."],
+    srcs     = ["runfiles.c", ":mkhdrs"],
+    deps     = [
+         "@liblogc//lib:logc",
+        "@uthash//lib:uthash"
+    ],
+    local_defines = [
+        "PROFILE_$(COMPILATION_MODE)",
+        "BAZEL_CURRENT_REPOSITORY=\\\"{}\\\"".format(package_relative_label("@runfiles").repo_name)
+    ] + select({
+        "@platforms//os:linux": [
+            "_POSIX_C_SOURCE=200809L", # strdup
+            "_DEFAULT_SOURCE"   # strsep
+        ],
+        "//conditions:default": {}
+    }),
+    copts = BASE_COPTS + ["-I$(GENDIR)/lib"],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        # "@platforms//os:linux": ["-rdynamic"],
+        # non-linux: [ "-Wl,--export-dynamic", "-ldl"],
+        "//conditions:default": {}
+    }),
+    visibility = ["//visibility:public"]
+)
+
+################################################################
+makeheaders(
+    name = "mkhdrs_export",
+    out ="librunfiles.h",
+    export_interface = True,
+    hdrs_srcs = [
+        "runfiles.c",
+    ],
+    visibility = ["//visibility:public"]
+)
+
+################################################################
+makeheaders(
+    name = "mkhdrs",
+    hdrs_srcs = [
+        "runfiles.c",
+        # "test.c",
+        # "test_app.c",
+    ],
+    additional_srcs = [
+        "@liblogc//macros:ansi_colors.h"
+    ] + select({
+        "@obazl_config_cc//profile:dev?": [
+            "@liblogc//macros:logging_debug.h"
+        ],
+        # special case: built as tool, transitioned to opt
+        # "@obazl_config_cc//compilation_mode:opt": [
+        #     "@liblogc//macros:logging_debug.h"
+        # ],
+        "//conditions:default": [
+            "@liblogc//macros:logging_ndebug.h"
+        ]
+    })
+)
+
