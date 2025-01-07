@@ -5,14 +5,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "log.h"
+#include "liblogc.h"
 #include "unity.h"
 #include "librunfiles.h"
 
 /* #include "test.h" */
 
-extern bool debug;
-extern bool trace;
+bool debug;
+bool trace;
 extern bool verbose;
 
 /* UT_string *buf; */
@@ -23,7 +23,8 @@ static struct runfiles_s *runfiles = NULL;
 void setUp(void) {
     /* printf(GRN "setUp:" CRESET " %s\n", pgm); */
     if (runfiles != NULL) return;
-    runfiles = runfiles_new(pgm);
+    rf_init(pgm);
+    /* runfiles = */
     printf("runfiles:\n");
     int i = 0;
     while (runfiles[i].key != NULL) {
@@ -40,7 +41,7 @@ void tearDown(void) {
 }
 
 void test_runfiles(void) {
-    char *test_str = "foo";
+    /* char *test_str = "foo"; */
     int i = 0;
     while (runfiles[i].key != NULL) {
         char *lhs_basename = basename(runfiles[i].key);

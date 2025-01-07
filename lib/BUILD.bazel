@@ -1,0 +1,107 @@
+load("@makeheaders//rules:makeheaders.bzl", "makeheaders")
+
+BASE_COPTS = [
+    "-x", "c",
+    # "-mcpu=arm64",
+    # "-target", "arm64-apple-darwin22.5.0",
+    "-Wall",
+    "-Wextra",
+    # GCC:
+    # "-Werror", # turn all warnings into errors
+    # "-Wfatal-errors", # stop on first error
+] + select({
+    "@platforms//os:macos": [
+        "-std=c11",
+        "-Werror=pedantic", # not needed with -Werror?
+        "-Wpedantic", # same as -pedantic, strict ISO C and ISO C++ warnings
+        "-pedantic-errors",
+        "-Wno-gnu-statement-expression",
+        # "-Werror=pedantic",
+        # "-Wno-gnu",
+        # "-Wno-format-pedantic",
+    ],
+    "@platforms//os:linux": [
+        "-std=gnu11",
+        "-fPIC",
+        # "-Wl,--no-undefined",
+    ],
+    "//conditions:default": ["-std=c11"],
+})
+
+###########
+cc_library(
+    name  = "runfiles",
+    hdrs = ["librunfiles.h"],
+    includes = ["."],
+    srcs  = [
+        "runfiles.c",
+        ":mkhdrs"
+        #"runfiles.h"
+    ],
+    deps = [
+        "@cwalk//lib:cwalk",
+        "@liblogc//lib:logc",
+        "@uthash//lib:uthash"
+    ],
+    local_defines = [
+        "PROFILE_$(COMPILATION_MODE)",
+        "BAZEL_CURRENT_REPOSITORY=\\\"{}\\\"".format(repo_name()),
+    ],
+    # defines = select({
+    #     "@platforms//os:debug": ["DEBUG_TRACE"],
+    #     "//conditions:default":   []
+    # }) + select({
+    #     "@platforms//os:linux": ["_XOPEN_SOURCE=500"], # strdup
+    #     "//conditions:default":   []
+    # }) + [
+    # ],
+    copts = BASE_COPTS + [
+        "-I$(GENDIR)/lib",
+        # "-I$(GENDIR)/external/runfiles~{}/src".format(RUNFILES_VERSION),
+        # "-Iexternal/uthash~{}/src".format(UTHASH_VERSION),
+        # "-Iexternal/liblogc~{}/src".format(LIBLOGC_VERSION),
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        # "@platforms//os:linux": ["-rdynamic"],
+        # non-linux: [ "-Wl,--export-dynamic", "-ldl"],
+        "//conditions:default": {}
+    }),
+    visibility = ["//visibility:public"]
+)
+
+################################################################
+makeheaders(
+    name = "mkhdrs_export",
+    out ="librunfiles.h",
+    export_interface = True,
+    hdrs_srcs = [
+        "runfiles.c",
+    ],
+    visibility = ["//visibility:public"]
+)
+
+################################################################
+makeheaders(
+    name = "mkhdrs",
+    hdrs_srcs = [
+        "runfiles.c",
+        # "test.c",
+        # "test_app.c",
+    ],
+    additional_srcs = [
+        "@makeheaders//logging:ansi_colors.h"
+    ] + select({
+        "@makeheaders//compilation_mode:fastbuild": [
+            "@makeheaders//logging:macros_debug.h"
+        ],
+        # special case: built as tool, transitioned to opt
+        # "@makeheaders//compilation_mode:opt": [
+        #     "@makeheaders//logging:macros_debug.h"
+        # ],
+        "//conditions:default": [
+            "@makeheaders//logging:macros_ndebug.h"
+        ]
+    })
+)
+

@@ -6,6 +6,8 @@ WARNING: not ready for use
 
 Design doc: link:https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub[Bazel Runfiles Libraries]
 
+mailing list thread: link:https://groups.google.com/g/bazel-discuss/c/DsVivJhU7Bw[Runfiles library spec documentation]
+
 link:https://github.com/bazelbuild/proposals/blob/main/designs/2022-07-21-locating-runfiles-with-bzlmod.md[2022-07-21-locating-runfiles-with-bzlmod.md]
 
 Other runfiles libs:
