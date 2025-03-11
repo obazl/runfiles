@@ -124,41 +124,6 @@ EXPORT char *rf_rlocation(char *runfile)
     }
     return NULL;
 }
-/* LOCAL char *_get_repo_mapping(void) */
-/* { */
-/*
-  case: BAZEL_TEST == 1
-      running a test target with either bazel test or bazel run
-      RUNFILES_DIR is defined?
-      TEST_SRCDIR = runfiles dir
-  case: BAZEL_TEST == undefined
-      Bazel defines except BUILD_WORKSPACE_DIR,
-      BUILD_WORKING_DIRECTORY undefined, e.g. TEST_SRCDIR,
-      RUNFILES_* etc.
-      means we're in a bazel run env.
-      In this case runfiles dir derivable from argv[0]
-      (executable path). e.g. if argv[0] is foo/bar,
-      then we will have foo/bar.repo_mapping,
-      foo/bar.runfiles, foo/bar.runfiles/MANIFEST,
-      and foo/bar.runfiles_manifest.
-      I.e. for executable foo/bar:baz, runfiles are
-      foo/bar/baz.runfiles
-
-      Also in this case we should set RUNFILES_MANIFEST_FILE or
-      RUNFILES_DIR envvars "for the benefit of data-dependency
-      binaries". Meaning? E.g. if this exec creates a runfiles object
-      and sets those env vars, it may then dload a plugin, which can
-      then rely on those env vars instead of rediscovering the
-      runfiles stuff. ???
-
-      "(in case of runfiles dir w/o manifest) the client needs to
-      check whether the rlocation-returned path exists anyway, so
-      looking up the runfile from a manifest when the directory tree
-      is also available doesn't gain anything."
-
-  See https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub
- */
-
 LOCAL char *_get_runfiles_manifest(char *argv0)
 {
     TRACE_ENTRY;
@@ -267,6 +232,41 @@ LOCAL char *_get_runfiles_dir(char *argv0)
     return NULL;
 }
 
+/* LOCAL char *_get_repo_mapping(void) */
+/* { */
+/*
+  case: BAZEL_TEST == 1
+      running a test target with either bazel test or bazel run
+      RUNFILES_DIR is defined?
+      TEST_SRCDIR = runfiles dir
+  case: BAZEL_TEST == undefined
+      Bazel defines except BUILD_WORKSPACE_DIR,
+      BUILD_WORKING_DIRECTORY undefined, e.g. TEST_SRCDIR,
+      RUNFILES_* etc.
+      means we're in a bazel run env.
+      In this case runfiles dir derivable from argv[0]
+      (executable path). e.g. if argv[0] is foo/bar,
+      then we will have foo/bar.repo_mapping,
+      foo/bar.runfiles, foo/bar.runfiles/MANIFEST,
+      and foo/bar.runfiles_manifest.
+      I.e. for executable foo/bar:baz, runfiles are
+      foo/bar/baz.runfiles
+
+      Also in this case we should set RUNFILES_MANIFEST_FILE or
+      RUNFILES_DIR envvars "for the benefit of data-dependency
+      binaries". Meaning? E.g. if this exec creates a runfiles object
+      and sets those env vars, it may then dload a plugin, which can
+      then rely on those env vars instead of rediscovering the
+      runfiles stuff. ???
+
+      "(in case of runfiles dir w/o manifest) the client needs to
+      check whether the rlocation-returned path exists anyway, so
+      looking up the runfile from a manifest when the directory tree
+      is also available doesn't gain anything."
+
+  See https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub
+ */
+
 LOCAL char *_get_repo_mapping(char *argv0)
 {
     TRACE_ENTRY;
@@ -285,7 +285,7 @@ LOCAL char *_get_repo_mapping(char *argv0)
     utstring_new(runfiles_root);
     utstring_printf(runfiles_root, "%s.repo_mapping", argv0);
     LOG_INFO(1, "accessing %s", utstring_body(runfiles_root));
-    int rc = access(utstring_body(runfiles_root), R_OK);
+    int rc = access(utstring_body(runfiles_root), F_OK);
     if (rc == 0) {
         char *result = strndup(utstring_body(runfiles_root),
                                utstring_len(runfiles_root));
@@ -294,8 +294,10 @@ LOCAL char *_get_repo_mapping(char *argv0)
         /*     log_debug("using RUNFILES_DIR: %s", result); */
         return result;
     } else {
-        log_error("XXXXXXXXXXXXXXXX NO REPO_MAPPING ################");
-        /* FIXME */
+        /* FIXME FIXME */
+        /* log_error("NO ACCESS: %s", */
+        /*           utstring_body(runfiles_root)); */
+        /* log_info("CWD: %s", getcwd(NULL, 0)); */
         return argv0;
     }
     return NULL;
@@ -385,6 +387,7 @@ EXPORT void rf_init(char* argv0)
 
     // else
 
+    /* broken: */
     rf_repo_mapping = _get_repo_mapping(argv0);
 
     initialized = true;
