@@ -20,6 +20,9 @@
              char *libs7_repo = rf_rlocation(BAZEL_CURRENT_REPOSITORY "/path/to/data.txt");
  */
 #include <errno.h>
+#if INTERFACE
+#include <fts.h>
+#endif
 #include <libgen.h>
 #include <spawn.h>
 #include <stdbool.h>
@@ -39,9 +42,12 @@ int     DEBUG_LEVEL    = 0;
 
 bool verbose;
 
+static bool initialized = false;
+
 static char *rf_manifest_file = NULL;
 static char *rf_exe_root = NULL;
 static char *rf_tree_root = NULL;
+static char *rf_repo_mapping = NULL;
 
 static UT_string *runfile_abs;
 
@@ -67,11 +73,24 @@ EXPORT char *rf_root(void)
     return rf_tree_root;
 }
 
+EXPORT char *rf_repo_map(void)
+{
+    TRACE_ENTRY;
+    return rf_repo_mapping;
+    TRACE_EXIT;
+}
+
 EXPORT char *rf_rlocation(char *runfile)
 {
     TRACE_ENTRY;
     LOG_INFO(0, "runfile: %s", runfile);
     LOG_INFO(0, "rf_tree_root: %s", rf_tree_root);
+
+    if (!initialized) {
+        fprintf(stderr, "%s:%d ERROR: librunfiles not initialized; call rf_init(dir) first.\n", __FILE__, __LINE__);
+        // exit?
+        return NULL;
+    }
 
     utstring_new(runfile_abs);
     utstring_printf(runfile_abs, "%s/%s", rf_tree_root, runfile);
@@ -99,6 +118,7 @@ EXPORT char *rf_rlocation(char *runfile)
             utstring_free(runfile_abs);
             return result;
         } else {
+            LOG_DEBUG(0, "NOT found runfile: %s", utstring_body(runfile_abs));
             utstring_free(runfile_abs);
         }
     }
@@ -106,69 +126,6 @@ EXPORT char *rf_rlocation(char *runfile)
 }
 /* LOCAL char *_get_repo_mapping(void) */
 /* { */
-/*     log_debug("ENTRY: _get_repo_mapping"); */
-/*     char *rf_repo_mapping; */
-
-/*     UT_string *manifest_file; */
-/*     utstring_new(manifest_file); */
-
-/*     /\* launch_dir = getenv("TEST_SRCDIR"); // getcwd(NULL, 0); *\/ */
-
-/*     runfiles_manifest_file = getenv("RUNFILES_MANIFEST_FILE"); */
-/*     if (rf_debug) */
-/*         log_debug("RUNFILES_MANIFEST_FILE: %s", runfiles_manifest_file); */
-/*     if (runfiles_manifest_file) { */
-/*         /\* utstring_printf(manifest_file, "%s", runfiles_manifest_file); *\/ */
-/*         /\* int rc = access(utstring_body(manifest_file), R_OK); *\/ */
-/*         int rc = access(runfiles_manifest_file, R_OK); */
-/*         if (rc == 0) { */
-/*             if (rf_debug) */
-/*                 log_debug("using RUNFILES_MANIFEST_FILE: %s", */
-/*                           runfiles_manifest_file); */
-/*             return strndup(runfiles_manifest_file, */
-/*                            strlen(runfiles_manifest_file)); */
-/*         } */
-/*     } */
-/*     // else try argv0-relative */
-/*     // argv[0] is executable; runfiles subdir is same name w/sfx '.runfiles' */
-/*     // manifest is either <exec>.runfiles/MANIFEST */
-/*     // or <exec>.runfiles_manifest */
-/*     log_debug("trying argv0: %s", argv0); */
-
-/*     utstring_renew(manifest_file); */
-/*     utstring_printf(manifest_file, "%s.runfiles/MANIFEST", argv0); */
-/*     if (rf_debug) */
-/*         log_debug("accessing argv0 MANIFEST: %s", utstring_body(manifest_file)); */
-/*     int rc = access(utstring_body(manifest_file), R_OK); */
-/*     if (rc == 0) { */
-/*         if (rf_debug) */
-/*             log_debug("using argv0/MANIFEST: %s", utstring_body(manifest_file)); */
-/*         char *result = strndup(utstring_body(manifest_file), */
-/*                                utstring_len(manifest_file)); */
-/*         utstring_free(manifest_file); */
-/*         return result; */
-/*     } */
-
-/*     UT_string *runfiles_dir; */
-/*     utstring_new(runfiles_dir); */
-/*     utstring_printf(runfiles_dir, "%s.runfiles", argv0); */
-/*     if (rf_debug) */
-/*         log_debug("accessing argv runfiles dir: %s", */
-/*                   utstring_body(runfiles_dir)); */
-/*     rc = access(utstring_body(runfiles_dir), R_OK); */
-/*     if (rc == 0) { */
-/*         if (rf_debug) */
-/*             log_debug("using rfdir argv0.runfiles: %s", */
-/*                       utstring_body(runfiles_dir)); */
-/*         char *result = strndup(utstring_body(runfiles_dir), */
-/*                                utstring_len(runfiles_dir)); */
-/*         utstring_free(runfiles_dir); */
-/*         return result; */
-/*     } */
-/*     log_error("XXXXXXXXXXXXXXXX NO RUNFILES MANIFEST ################"); */
-/*     return NULL; */
-/* } */
-
 /*
   case: BAZEL_TEST == 1
       running a test target with either bazel test or bazel run
@@ -201,6 +158,7 @@ EXPORT char *rf_rlocation(char *runfile)
 
   See https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub
  */
+
 LOCAL char *_get_runfiles_manifest(char *argv0)
 {
     TRACE_ENTRY;
@@ -309,6 +267,40 @@ LOCAL char *_get_runfiles_dir(char *argv0)
     return NULL;
 }
 
+LOCAL char *_get_repo_mapping(char *argv0)
+{
+    TRACE_ENTRY;
+    /* $TEST_SRCDIR =? $RUNFILES_DIR
+       - see https://github.com/bazelbuild/bazel/issues/6093 */
+    /* char *test_srcdir = getenv("TEST_SRCDIR"); */
+    /* LOG_DEBUG(0, "TEST_SRCDIR: %s", test_srcdir); */
+
+    char *runfiles_dir = getenv("RUNFILES_DIR");
+    LOG_DEBUG(0, "RUNFILES_DIR: %s", runfiles_dir);
+    if (runfiles_dir) {
+        return strndup(runfiles_dir, strlen(runfiles_dir));
+    }
+
+    UT_string *runfiles_root;
+    utstring_new(runfiles_root);
+    utstring_printf(runfiles_root, "%s.repo_mapping", argv0);
+    LOG_INFO(1, "accessing %s", utstring_body(runfiles_root));
+    int rc = access(utstring_body(runfiles_root), R_OK);
+    if (rc == 0) {
+        char *result = strndup(utstring_body(runfiles_root),
+                               utstring_len(runfiles_root));
+        utstring_free(runfiles_root);
+        /* if (rf_debug) */
+        /*     log_debug("using RUNFILES_DIR: %s", result); */
+        return result;
+    } else {
+        log_error("XXXXXXXXXXXXXXXX NO REPO_MAPPING ################");
+        /* FIXME */
+        return argv0;
+    }
+    return NULL;
+}
+
 EXPORT void runfiles_delete(struct runfiles_s *runfiles)
 {
     free(runfiles);
@@ -393,7 +385,149 @@ EXPORT void rf_init(char* argv0)
 
     // else
 
+    rf_repo_mapping = _get_repo_mapping(argv0);
+
+    initialized = true;
+    /* fprintf(stdout, "%s:%d INFO: librunfiles initialized\n", */
+    /*         __FILE__, __LINE__); */
+
     TRACE_EXIT;
     /* return runfiles; */
+}
+
+LOCAL int _compare(const FTSENT** one, const FTSENT** two)
+{
+    return (strcmp((*one)->fts_name, (*two)->fts_name));
+}
+
+/* LOCAL void _handle_dir(FTS* tree, FTSENT *ftsentry) */
+/* { */
+/*     TRACE_ENTRY; */
+/*     (void)tree; */
+/*     printf("_handle_dir %s\n", ftsentry->fts_path); */
+/*     TRACE_EXIT; */
+/* } */
+
+/* LOCAL void _handle_symlink(FTS* tree, FTSENT *ftsentry) */
+/* { */
+/*     TRACE_ENTRY; */
+/*     (void)tree; */
+/*     printf("_handle_symlink %s\n", ftsentry->fts_path); */
+/*     TRACE_EXIT; */
+/* } */
+
+/* LOCAL void _handle_file(FTSENT *ftsentry) */
+/* { */
+/*     TRACE_ENTRY; */
+/*     printf("_handle_file %s\n", ftsentry->fts_path); */
+/*     TRACE_EXIT; */
+/* } */
+
+EXPORT void rf_fts(char *root, void(*handle_file)(char *))
+{
+    TRACE_ENTRY;
+    FTS* tree = NULL;
+    FTSENT *ftsentry     = NULL;
+
+    LOG_DEBUG(0, "fts root: %s", root);
+
+    char *old_cwd = getcwd(NULL, 0);
+    LOG_DEBUG(0, "old cwd: %s", old_cwd);
+    int rc = chdir(root);
+    (void)rc; /* FIXME */
+    /* char *cwd = getcwd(NULL, 0); */
+    /* LOG_DEBUG(0, "new cwd: %s", cwd); */
+
+    char *const _traversal_root[] = {
+        /* [0] = resolved_troot, // traversal_root; */
+        [0] = (char *const)"./",
+        NULL
+    };
+
+    errno = 0;
+    tree = fts_open(_traversal_root,
+                    FTS_COMFOLLOW
+                    | FTS_NOCHDIR
+                    | FTS_PHYSICAL,
+                    // NULL
+                    &_compare
+                    );
+    if (errno != 0) {
+        log_error("fts_open error: %s", strerror(errno));
+        exit(EXIT_FAILURE);
+        return;
+    } else {
+        LOG_DEBUG(0, "fts_open ok %s", _traversal_root[0]);
+    }
+
+    if (tree != NULL) {
+        while( (ftsentry = fts_read(tree)) != NULL) {
+            /* LOG_DEBUG(0, "entry: %d %s", */
+            /*           ftsentry->fts_info, */
+            /*           ftsentry->fts_path); */
+            switch (ftsentry->fts_info) {
+            case FTS_SL: // symlink
+                handle_file(ftsentry->fts_path);
+                /* _handle_symlink(tree, ftsentry); */
+                break;
+            case FTS_F : // regular file
+                handle_file(ftsentry->fts_path);
+                break;
+            case FTS_D : // dir visited in pre-order
+                /* _handle_dir(tree, ftsentry); */
+                break;
+            case FTS_DP:
+                /* postorder directory */
+                break;
+            case FTS_SLNONE:
+                /* symlink to non-existent target */
+                LOG_WARN(0, "FTS_SLNONE (dangling symlink): %s", ftsentry->fts_path);
+                break;
+            case FTS_ERR:
+                LOG_ERROR(0, "FTS_ERR: %s", ftsentry->fts_path);
+                LOG_ERROR(0, "  error: %d: %s", ftsentry->fts_errno,
+                          strerror(ftsentry->fts_errno));
+                break;
+            case FTS_DC:
+                /* dir causing a cycle dir */
+                LOG_WARN(0, "FTS_DC (dir cycle): %s", ftsentry->fts_path);
+                break;
+            case FTS_DNR:
+                /* unreadable dir */
+                LOG_WARN(0, "FTS_DNR (unreadable dir): %s", ftsentry->fts_path);
+                break;
+            case FTS_NS:
+                /* no stat info, error */
+                LOG_ERROR(0, "FTS_NS (no stat info, error): %s", ftsentry->fts_path);
+                LOG_ERROR(0, "  error: %d: %s", ftsentry->fts_errno,
+                          strerror(ftsentry->fts_errno));
+                break;
+            case FTS_NSOK:
+                /* no stat info, not an error */
+                LOG_WARN(0, "FTS_NSOK (no stat info, non-error): %s", ftsentry->fts_path);
+                break;
+            case FTS_DEFAULT:
+                LOG_WARN(0, "FTS_DEFAULT: %s", ftsentry->fts_path);
+                break;
+            case FTS_DOT : // not specified to fts_open
+                LOG_INFO(0, "FTS_DOT (hidden dir): %s", ftsentry->fts_path);
+                // do not process children of hidden dirs
+                /* fts_set(tree, ftsentry, FTS_SKIP); */
+                break;
+            default:
+                LOG_ERROR(0, RED "Unhandled FTS type %d\n",
+                          ftsentry->fts_info);
+                exit(EXIT_FAILURE);
+                break;
+            }
+        }
+        LOG_INFO(0, "end while: (ftsentry = fts_read(tree)) != NULL)", "");
+        chdir(old_cwd);
+
+    } else {
+        log_error("TREE == NULL");
+    }
+
+
 }
 

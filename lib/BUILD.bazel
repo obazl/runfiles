@@ -1,5 +1,5 @@
 load("@makeheaders//rules:makeheaders.bzl", "makeheaders")
-load("@obazl_config_cc//config:BASE.bzl", "BASE_COPTS")
+load("@obazl_tools_cc//config:BASE.bzl", "BASE_COPTS")
 
 ###########
 cc_library(
@@ -53,11 +53,11 @@ makeheaders(
     additional_srcs = [
         "@liblogc//macros:ansi_colors.h"
     ] + select({
-        "@obazl_config_cc//profile:dev?": [
+        "@obazl_tools_cc//profile:dev?": [
             "@liblogc//macros:logging_debug.h"
         ],
         # special case: built as tool, transitioned to opt
-        # "@obazl_config_cc//compilation_mode:opt": [
+        # "@obazl_tools_cc//compilation_mode:opt": [
         #     "@liblogc//macros:logging_debug.h"
         # ],
         "//conditions:default": [
