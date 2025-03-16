@@ -175,6 +175,8 @@
     "https://raw.githubusercontent.com/obazl/registry/main/modules/libpfm/4.11.0/MODULE.bazel": "not found",
     "https://raw.githubusercontent.com/obazl/registry/main/modules/makeheaders/3.0.0/MODULE.bazel": "74e1635a169eb10d67c3c5ef9e5183cbd99396c65f74d5c2281821ff704e3b49",
     "https://raw.githubusercontent.com/obazl/registry/main/modules/makeheaders/3.0.0/source.json": "60f7977e9c117cf559efb692919e0d127ab58536083eef78769673542f5f9b6f",
+    "https://raw.githubusercontent.com/obazl/registry/main/modules/obazl_tools_cc/3.0.0/MODULE.bazel": "55116fe7b6d76b58afe32c3a7ad7d91790474a1237386e2c160867830f62cedf",
+    "https://raw.githubusercontent.com/obazl/registry/main/modules/obazl_tools_cc/3.0.0/source.json": "3b5f152499e7d24bbe9b78e6d6f79220456d6e6ae0a50ca7f34df63687d69483",
     "https://raw.githubusercontent.com/obazl/registry/main/modules/platforms/0.0.10/MODULE.bazel": "not found",
     "https://raw.githubusercontent.com/obazl/registry/main/modules/platforms/0.0.11/MODULE.bazel": "not found",
     "https://raw.githubusercontent.com/obazl/registry/main/modules/platforms/0.0.4/MODULE.bazel": "not found",
@@ -462,7 +464,7 @@
     },
     "@@rules_python+//python/private/pypi:pip.bzl%pip_internal": {
       "general": {
-        "bzlTransitiveDigest": "gI+deLdiN3HoT5y7LcbvZLpdyCTx17lAymkg9ZvugLE=",
+        "bzlTransitiveDigest": "Ktlvuwl7iL6H5Xizfvv0C5YgMwxj7b5iMqQlU33QDP4=",
         "usagesDigest": "OLoIStnzNObNalKEMRq99FqenhPGLFZ5utVLV4sz7OI=",
         "recordedFileInputs": {
           "@@rules_python+//tools/publish/requirements_darwin.txt": "2994136eab7e57b083c3de76faf46f70fad130bc8e7360a7fed2b288b69e79dc",

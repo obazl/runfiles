@@ -40,8 +40,6 @@ bool    TRACE_FLAG     = false;
 #define DEBUG_LEVEL    rf_debug
 int     DEBUG_LEVEL    = 0;
 
-bool verbose;
-
 static bool initialized = false;
 
 static char *rf_manifest_file = NULL;
